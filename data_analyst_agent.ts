@@ -1,78 +1,66 @@
 import { load } from "jsr:@std/dotenv";
-import Anthropic from "npm:@anthropic-ai/sdk@0.32.1";
+import {
+  AnthropicModelProvider,
+  createZypherContext,
+  ZypherAgent,
+} from "@corespeed/zypher";
+import { eachValueFrom } from "rxjs-for-await";
 
-// Load environment variables
 await load({ export: true });
 
-const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-if (!apiKey) {
-  throw new Error("ANTHROPIC_API_KEY is required");
+function getRequiredEnv(name: string): string {
+  const value = Deno.env.get(name);
+  if (!value) {
+    throw new Error(`Environment variable ${name} is not set`);
+  }
+  return value;
 }
 
-const client = new Anthropic({ apiKey });
+const context = await createZypherContext(Deno.cwd());
+const provider = new AnthropicModelProvider({
+  apiKey: getRequiredEnv("ANTHROPIC_API_KEY"),
+});
 
-// Read CSV file
-async function readCSV(filePath: string): Promise<string> {
-  const data = await Deno.readTextFile(filePath);
-  return data;
-}
+const agent = new ZypherAgent(context, provider, {
+  systemPrompt:
+    "You are a data analysis agent. You receive CSV data and a user question and return clear analytical insights.",
+});
 
-// Analyze data
-async function analyzeData(csvData: string, query: string) {
-  console.log("🔍 Analyzing data...\n");
+const csvFile = Deno.args[0] ?? "sales_data.csv";
+const query =
+  Deno.args[1] ??
+  "Analyze this sales data and provide key insights, statistics, trends, and recommendations.";
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `You are a data analyst. Here is a CSV dataset:
+const csvData = await Deno.readTextFile(csvFile);
+
+const taskDescription = `
+You are a senior data analyst. Here is a CSV dataset:
 
 ${csvData}
 
-${query}
+User question: ${query}
 
 Please provide:
 1. Key insights and patterns
-2. Statistical summary
-3. Trends or anomalies
-4. Actionable recommendations
+2. Basic statistical summary (means/totals where relevant)
+3. Notable trends or anomalies
+4. Concrete, actionable recommendations
 
-Format your response clearly with headers and bullet points.`,
-      },
-    ],
-  });
+Format your answer with clear headings and bullet points.
+`;
 
-  return message.content[0].text;
+console.log("Data Analysis Agent (Zypher)\n");
+console.log(`File: ${csvFile}`);
+console.log(`Query: ${query}\n`);
+console.log("Running task via ZypherAgent...\n");
+
+const event$ = agent.runTask(
+  taskDescription,
+  "claude-sonnet-4-20250514",
+);
+
+for await (const event of eachValueFrom(event$ as any)) {
+  console.log(event);
 }
 
-// Main function
-async function main() {
-  const csvFile = Deno.args[0] || "sales_data.csv";
-  const query = Deno.args[1] || "Analyze this sales data and provide insights.";
-
-  console.log(`📊 Data Analysis Agent`);
-  console.log(`${"=".repeat(50)}\n`);
-  console.log(`📁 File: ${csvFile}`);
-  console.log(`❓ Query: ${query}\n`);
-
-  try {
-    // Read CSV
-    const csvData = await readCSV(csvFile);
-    console.log(`✅ Loaded ${csvData.split("\n").length - 1} rows\n`);
-
-    // Analyze
-    const analysis = await analyzeData(csvData, query);
-
-    console.log("📈 Analysis Results:");
-    console.log("=".repeat(50));
-    console.log(analysis);
-    console.log("\n" + "=".repeat(50));
-    console.log("✅ Analysis complete!");
-  } catch (error) {
-    console.error("❌ Error:", error.message);
-  }
-}
-
-main();
+console.log("\nAnalysis complete!");
