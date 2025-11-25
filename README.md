@@ -29,15 +29,26 @@ ANTHROPIC_API_KEY=your_api_key_here
 
 ## Usage
 
-Run the data analysis agent:
-```bash
-deno run --allow-env --allow-net --allow-read data_analyst_agent.ts
-```
+To run the Data Analysis Agent, use the following command inside the project directory:
 
-With custom query:
-```bash
-deno run --allow-env --allow-net --allow-read data_analyst_agent.ts sales_data.csv "What are the top selling products?"
-```
+deno run --allow-env --allow-net --allow-read data_analyst_agent.ts
+
+
+You can also specify a custom CSV file and analysis question:
+
+deno run --allow-env --allow-env --allow-net --allow-read data_analyst_agent.ts <csv_file> "<your_question>"
+
+
+Example:
+
+deno run --allow-env --allow-net --allow-read data_analyst_agent.ts sales_data.csv "What trends can you find and what actions should we take?"
+
+## Technical Stack
+
+- Runtime: Deno
+- Agent framework: Zypher (`@corespeed/zypher`)
+- LLM: Claude Sonnet 4.5 (Anthropic)
+- Interface: CLI using `ZypherAgent.runTask` and streaming task events
 
 ## Example Output
 
