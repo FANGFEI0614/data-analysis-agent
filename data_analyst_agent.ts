@@ -50,6 +50,7 @@ Format your answer with clear headings and bullet points.
 `;
 
 console.log("Data Analysis Agent (Zypher)\n");
+console.log("============================================\n");
 console.log(`File: ${csvFile}`);
 console.log(`Query: ${query}\n`);
 console.log("Running task via ZypherAgent...\n");
